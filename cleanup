@@ -1,0 +1,20 @@
+#!/bin/sh
+
+clean() {
+  echo "Cleaning up"
+  cat ../settings.gradle | sed "s/$(cat proj-config/version)/VERSION/g" > ../settings.gradle
+  rm -rf data/ proj-config/
+}
+
+if [ $1 == "--no-warn" ]; then
+  clean
+else
+  echo "BIG WARNING! DANGER! YOU ARE ABOUT TO NUKE THE ENTIRE PROJECT! TYPE 'yes' TO CONFIRM"
+  read maybe
+  if [ "$maybe" != "yes" ]; then
+    echo "Abort."
+  else
+    clean
+  fi
+fi
+

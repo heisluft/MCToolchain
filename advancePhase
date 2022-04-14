@@ -1,0 +1,9 @@
+#!/bin/bash
+if [ "$(cat proj-config/phase)" -eq 1 ]; then
+  echo 'We already advanced the development phase'
+  exit 1
+fi
+java8 -jar Reveng.jar cleanMappings data/current.frg data/fergie.frg
+mv data/current.frg data/unclean-fergie.frg
+cp data/fergie.frg data/current.frg
+echo 1 > proj-config/phase

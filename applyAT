@@ -1,0 +1,20 @@
+#!/bin/sh
+
+if [ ! -f "data/at.cfg" ]; then
+  cp temp/minecraft.jar temp/minecraft-at.jar
+  printf "No AT file provided.\n"
+  exit 0
+fi
+
+if [ "$(cat proj-config/phase)" -eq 1 ]; then
+  # Generate the mappings used for renaming patches
+  java8 -jar RevEng.jar genMediatorMappings data/fergie.frg data/current.frg -o temp/frg2src.frg
+
+  # Remap all patches
+  java8 -cp RevEng.jar de.heisluft.reveng.SrcLevelRemapper data/at.cfg temp/frg2src.frg temp/at.cfg
+else
+  cp data/at.cfg temp/at.cfg
+fi
+
+java8 -cp RevEng.jar de.heisluft.reveng.at.ATApplicator temp/minecraft.jar temp/at.cfg temp/minecraft-at.jar
+printf "Done.\n"

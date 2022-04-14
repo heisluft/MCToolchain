@@ -1,0 +1,44 @@
+#!/bin/sh
+
+phase="$(cat proj-config/phase)"
+
+# Development Phase 0 consists of remapping classNames. As those change imports etc, decompilation will not
+# produce stable source code, making it impossible to automatically apply patches
+if [ $phase -ne 1 ]; then
+  echo 'Automatic patching requires development phase 1. Use ./advancePhase to initiate progression.'
+  echo 'trying to manually apply patches...'
+fi
+
+# Check if there actually are patches to apply
+shopt -s nullglob
+if [ "$(echo data/patches/*.patch)" == "" ]; then
+  echo 'No Patches exist, aborting.'
+  exit 0
+fi
+shopt -u nullglob
+
+# we generate a temp directory so we do not pollute data/
+mkdir -p temp/renamed-patches/
+
+if [ $phase -eq 0 ]; then
+  cp data/patches/* temp/renamed-patches/
+else
+  # Generate the mappings used for renaming patches
+  java8 -jar RevEng.jar genMediatorMappings data/fergie.frg data/current.frg -o temp/frg2src.frg
+
+  # Remap all patches
+  java8 -cp RevEng.jar de.heisluft.reveng.SrcLevelRemapper data/patches/ temp/frg2src.frg temp/renamed-patches/
+fi
+
+# Now apply those remapped patches
+for patch in $(echo temp/renamed-patches/*.patch); do
+  target=$(head -n 1 "$patch" | sed -r 's/--- (.+)\t.+/\1/g')
+  if [ "$target" != "" ] && [ -f "../$target" ]; then
+    patch ../"$target" "$patch"
+  else
+    echo "target '$target' not found for patch $patch"
+  fi
+done
+
+# Finally delete the temporary patches
+rm -rf temp/

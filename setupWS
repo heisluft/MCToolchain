@@ -1,0 +1,38 @@
+#!/bin/sh
+
+# First we want to wipe our build files and old source set
+rm -rf ../build/ ../launch/build/ ../out/ ../logs/ ../src/main/java/ ../.gradle/
+
+# The remapped jar will be in temp/, the decompiled jar in temp/decomp/
+mkdir -p temp/decomp
+
+# Remap the jar with our current mappings
+printf "Deobfuscating:\n"
+java8 -jar RevEng.jar remap data/minecraft.jar data/current.frg -o temp/minecraft.jar
+
+# Rename and apply AccessTransformers
+printf "Done.\n\nApplying AccessTransformers:\n"
+./applyAT
+
+# Decompile the remapped jar
+printf "\nDecompiling:\n"
+java11 -jar fernflower.jar temp/minecraft-at.jar temp/decomp
+
+# Extract the sources to our src directory
+printf "Done.\n\nExtracting:\n"
+mkdir -p ../src/main/java
+unzip -q -d ../src/main/java temp/decomp/minecraft-at.jar
+
+# Finally, delete the intermediate files
+printf "Done.\n\nDeleting Temp files:\n"
+rm -rf temp
+
+# Delete shaded sound system, we supply our own lib
+printf "Done.\n\nDeleting shaded files:\n"
+rm -rf ../src/main/java/de/
+
+# Try automatically patch the source set. This will do nothing before we actually remap fields and methods
+# also it will do nothing if no patches are provided
+printf "Done.\n\nPatching:\n"
+./applyPatches
+printf "Done."

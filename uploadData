@@ -1,0 +1,17 @@
+#!/bin/sh
+dir=~/IdeaProjects/Remapper/remap-tests/project-data/mc/"$(cat proj-config/version)"
+mkdir $dir
+cp data/fergie.frg "$dir"
+cp data/current.frg "$dir/src.frg"
+
+if [ -f "data/at.cfg" ]; then
+  cp data/at.cfg "$dir"
+fi
+
+shopt -s nullglob
+if [ "$(echo data/patches/*.patch)" != "" ]; then
+  cp -r data/patches $dir
+fi
+shopt -u nullglob
+
+#./cleanup --no-warn

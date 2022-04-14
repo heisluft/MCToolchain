@@ -1,0 +1,54 @@
+#!/bin/sh
+# We definitely want to avoid accidentally overwriting our mappings file as it could already contain work
+if [ -f "proj-config/phase" ]; then
+  echo 'project already initialized. If you really want to do this, manually delete proj-config/ first.'
+  exit 2
+fi
+
+version=$1
+if [ "$version" == "" ]; then
+  echo 'no version provided!'
+  exit 1
+fi
+
+if [ $# -gt 1 ] && [ $2 == "server" ]; then
+  server="-server"
+else
+  server=""
+fi
+version="$version$server"
+echo "Initializing Workspace for version $version"
+
+# The patches directory will host all frg-patches
+mkdir -p data/patches/
+if [ "$server" == "" ]; then
+  cp ~/IdeaProjects/Remapper/remap-tests/jars/mc/client/classic/$1.jar data/minecraft.jar
+
+  # Extract the versions resources from its jar
+  mkdir -p ../src/main/resources/
+  unzip data/minecraft.jar **.png **.gif -d ../src/main/resources/
+else
+  unzip ~/IdeaProjects/Remapper/remap-tests/jars/mc/server/$1.zip minecraft-server.jar -d data/
+  mv data/minecraft-server.jar data/minecraft.jar
+fi
+
+#Fix constructors
+java8 -cp RevEng.jar de.heisluft.reveng.ConstructorFixer data/minecraft.jar data/minecraft.jar
+
+# Generate the initial mappings
+java8 -jar RevEng.jar map data/minecraft.jar data/current.frg
+
+# Generate Access Transformers
+java8 -jar RevEng.jar remap data/minecraft.jar data/current.frg -o temp-minecraft.jar
+java8 -cp RevEng.jar de.heisluft.reveng.ATGenerator temp-minecraft.jar data/at.cfg
+rm temp-minecraft.jar
+
+# Update the gradle project name
+settings="$(cat ../settings.gradle | sed s/VERSION/$version/g)"
+echo "$settings" > ../settings.gradle
+
+
+# Finally, write project data to files
+mkdir proj-config/
+echo $version > proj-config/version
+echo 0 > proj-config/phase
